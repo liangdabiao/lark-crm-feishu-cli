@@ -51,6 +51,7 @@
 2. 调用 `+table-list` 发现所有表及其 `table_id`
 3. 按表名关键字匹配：客户管理、商机管理、合同管理、客户跟进记录、销售人员管理
 4. 缓存到会话中，后续命令直接使用
+5. 飞书crm模板地址：https://www.feishu.cn/base/bascndXmwM3qJOVZjUR6LS4uSng?table=tblVw8OKO1Yz2Lcl&view=vew4RfmKci
 
 换人使用、换表格，只需提供一个新 URL 即可。
 
