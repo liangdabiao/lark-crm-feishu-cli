@@ -148,7 +148,7 @@ lark-cli base +record-list \
 # 按阶段聚合统计（销售漏斗）— 读取 crm-analytics.md 获取 DSL
 lark-cli base +data-query \
   --base-token <base_token> \
-  --json '<参见 crm-analytics.md 销售漏斗模板>'
+  --dsl '<参见 crm-analytics.md 销售漏斗模板>'
 ```
 
 **输出格式**：展示机会名称（formula 字段，如"国信易有限公司-协商议价-..."）、客户名称（link 字段，需查客户管理表解析）、跟进阶段、业务价值、预计交易日期、跟进销售人员。

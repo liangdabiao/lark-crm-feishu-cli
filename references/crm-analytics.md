@@ -133,26 +133,36 @@ DSL 模板中 tableId 占位符说明：
 
 ### 4. 按销售区域统计
 
-```json
-{
-  "datasource": {
-    "type": "table",
-    "table": { "tableId": "<商机管理_table_id>" }
-  },
-  "dimensions": [
-    { "field_name": "销售区域", "alias": "dim_region" }
-  ],
-  "measures": [
-    { "field_name": "销售区域", "aggregation": "count_all", "alias": "opp_count" },
-    { "field_name": "业务价值", "aggregation": "sum", "alias": "total_value" }
-  ],
-  "sort": [
-    { "field_name": "total_value", "order": "desc" }
-  ],
-  "pagination": { "limit": 100 },
-  "shaper": { "format": "flat" }
-}
+> **注意**：商机管理表的「销售区域」是 lookup 字段，`+data-query` 不支持 lookup 字段。需采用两步方案：先从销售人员管理表获取「销售人员 → 销售区域」映射，再从商机管理表拉取记录后本地按区域聚合。
+
+**步骤 1**：查询销售人员管理表，建立「跟进销售人员 open_id → 销售区域」映射。
+
+```bash
+lark-cli base +record-list \
+  --base-token <base_token> \
+  --table-id <销售人员管理_table_id> \
+  --limit 100
 ```
+
+从返回结果的「销售」字段提取 open_id，与「销售区域」字段建立映射。
+
+**步骤 2**：查询商机管理表，拉取全部商机记录。
+
+```bash
+lark-cli base +record-list \
+  --base-token <base_token> \
+  --table-id <商机管理_table_id> \
+  --limit 200
+```
+
+**步骤 3**：AI 本地聚合 — 遍历商机记录，通过「跟进销售人员」的 open_id 查映射表得到「销售区域」，按区域汇总商机数和业务价值。
+
+**输出示例**：
+| 销售区域 | 商机数 | 业务价值总额 |
+|---------|--------|------------|
+| 华东地区 | 5 | ¥2,500,000 |
+| 华北地区 | 3 | ¥1,200,000 |
+| ... | ... | ... |
 
 ### 5. 合同金额汇总
 
@@ -250,7 +260,11 @@ DSL 模板中 tableId 占位符说明：
 }
 ```
 
-### 9. 赢单商机按月份统计（合同时间趋势)
+### 9. 合同按签约日期趋势
+
+按签约日期分组，统计每个日期的合同金额和数量。
+
+> **限制**：`+data-query` 不支持日期截断（如按月/季/年分组），使用签约日期作为 dimension 会按**精确日期**分组。若需按月份聚合，需用 `+record-list` 拉取合同记录后本地按年月聚合。
 
 ```json
 {
@@ -258,16 +272,28 @@ DSL 模板中 tableId 占位符说明：
     "type": "table",
     "table": { "tableId": "<合同管理_table_id>" }
   },
-  "dimensions": [],
-  "measures": [
-    { "field_name": "合同金额", "aggregation": "sum", "alias": "monthly_total" },
-    { "field_name": "合同金额", "aggregation": "count_all", "alias": "monthly_count" }
+  "dimensions": [
+    { "field_name": "签约日期", "alias": "dim_sign_date" }
   ],
-  "sort": [],
-  "pagination": { "limit": 100 },
+  "measures": [
+    { "field_name": "合同金额", "aggregation": "sum", "alias": "daily_total" },
+    { "field_name": "合同金额", "aggregation": "count_all", "alias": "daily_count" }
+  ],
+  "sort": [
+    { "field_name": "dim_sign_date", "order": "asc" }
+  ],
+  "pagination": { "limit": 5000 },
   "shaper": { "format": "flat" }
 }
 ```
+
+**输出示例**：
+| 签约日期 | 合同金额 | 合同数量 |
+|---------|---------|---------|
+| 2022/12/04 | ¥9,200,232 | 5 |
+| 2026/03/29 | ¥200,000 | 1 |
+
+**按月聚合替代方案**：若用户要求按月份查看趋势，使用 `+record-list` 拉取合同数据，AI 本地按签约日期的年-月部分分组统计。
 
 ### 10. 丢单原因分析
 ```json
@@ -300,7 +326,11 @@ DSL 模板中 tableId 占位符说明：
 
 ## 注意事项
 
-1. **data-query 限制**：需要 base 完全访问权限（FA）；不支持 formula / lookup / 关联等字段作为 dimensions 或 measures 的 `field_name`。
+1. **data-query 限制**：需要 base 完全访问权限（FA）；不支持 formula / lookup / 关联等字段作为 dimensions / measures / filters / sort 的 `field_name`。以下是 CRM 各表中常见的 **不可用于 data-query 的字段**：
+   - 商机管理表：机会名称（formula）、销售leader（lookup）、销售区域（lookup）、是否已有合同（lookup）、合同管理-商机名称（link）
+   - 客户管理表：最近跟进时间（lookup）、销售leader（lookup）、是否为公海客户（formula）、客户名称查重（formula）
+   - 合同管理表：签约人员（lookup）
+   - 如需按上述字段聚合，请使用 `+record-list` 拉取数据后本地计算。
 2. **字段名精确匹配**：DSL 中的 `field_name` 必须与表字段名完全一致（含大小写），不可凭猜测填写。
 3. **alias 规范**：alias 必须唯一且建议使用英文下划线格式（如 `dim_stage`、`total_value`）。
 4. **shaper 必填**：每个查询都必须包含 `"shaper": {"format": "flat"}`。
