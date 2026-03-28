@@ -1,16 +1,18 @@
 # CRM 操作命令详解
 
 > **前置条件：** 先阅读 [`../lark-shared/SKILL.md`](../../lark-shared/SKILL.md) 和 [`../lark-base/SKILL.md`](../../lark-base/SKILL.md)。
-
-本文档提供每个 CRM Shortcut 的详细命令参数、完整示例和注意事项。
+>
+> **重要变更（v2.1）：** 本文档不再硬编码 base-token 和 table-id。所有命令中的 `<base_token>` 和 `<对应表_table_id>` 为占位符，执行前替换为配置初始化中缓存的值。参见 [`../SKILL.md`](../SKILL.md) 的「配置初始化」章节。
 
 ## 通用参数
 
 所有命令共用：
 ```bash
---base-token bascndXmwM3qJOVZjUR6LS4uSng
+--base-token <base_token>
 --as user  # 默认，可省略
 ```
+
+---
 
 ## +客户查询
 
@@ -18,60 +20,16 @@
 
 ```bash
 lark-cli base +record-list \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblVw8OKO1Yz2Lcl \
+  --base-token <base_token> \
+  --table-id <客户管理_table_id> \
   --limit 50
 ```
 
-### 按关键词筛选客户
+### 按条件筛选
 
-通过视图筛选实现：
+**不要使用 `+view-set-filter`**，因为它需要修改共享视图权限（非管理员会 403），且必须指定 `--view-id`。
 
-```bash
-# Step 1: 设置视图筛选条件
-lark-cli base +view-set-filter \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblVw8OKO1Yz2Lcl \
-  --format json \
-  --json '{"field_name":"客户名称","operator":"contains","value":["关键词"]}'
-
-# Step 2: 使用返回的 view_id 查询
-lark-cli base +record-list \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblVw8OKO1Yz2Lcl \
-  --view-id <返回的 view_id> \
-  --limit 50
-```
-
-### 按行业筛选
-
-```bash
-lark-cli base +view-set-filter \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblVw8OKO1Yz2Lcl \
-  --format json \
-  --json '{"field_name":"行业信息","operator":"is","value":["互联网"]}'
-```
-
-### 按城市筛选
-
-```bash
-lark-cli base +view-set-filter \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblVw8OKO1Yz2Lcl \
-  --format json \
-  --json '{"field_name":"所在城市","operator":"is","value":["北京"]}'
-```
-
-### 按客户所有人筛选
-
-```bash
-lark-cli base +view-set-filter \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblVw8OKO1Yz2Lcl \
-  --format json \
-  --json '{"field_name":"客户所有人","operator":"is","value":["ou_xxx"]}'
-```
+**正确方式**：用 `+record-list` 拉取全量数据后，AI 在本地按字段匹配过滤（行业、城市、规模、客户所有人等）。
 
 ### 输出字段顺序
 
@@ -93,8 +51,8 @@ lark-cli base +view-set-filter \
 
 ```bash
 lark-cli base +record-upsert \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblVw8OKO1Yz2Lcl \
+  --base-token <base_token> \
+  --table-id <客户管理_table_id> \
   --json '{
     "客户名称": "XX科技有限公司",
     "行业信息": "科技",
@@ -112,8 +70,8 @@ lark-cli base +record-upsert \
 
 ```bash
 lark-cli base +record-upsert \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblVw8OKO1Yz2Lcl \
+  --base-token <base_token> \
+  --table-id <客户管理_table_id> \
   --json '{"客户名称": "新客户公司"}'
 ```
 
@@ -138,15 +96,15 @@ lark-cli base +record-upsert \
 ```bash
 # 更新单个字段
 lark-cli base +record-upsert \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblVw8OKO1Yz2Lcl \
+  --base-token <base_token> \
+  --table-id <客户管理_table_id> \
   --record-id recXXXXXX \
   --json '{"所在城市": "深圳"}'
 
 # 更新多个字段
 lark-cli base +record-upsert \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblVw8OKO1Yz2Lcl \
+  --base-token <base_token> \
+  --table-id <客户管理_table_id> \
   --record-id recXXXXXX \
   --json '{"行业信息": "金融", "客户规模": ">10000", "对接人姓名": "李四"}'
 ```
@@ -159,38 +117,21 @@ lark-cli base +record-upsert \
 
 ```bash
 lark-cli base +record-list \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblMXhNvEvnEU3W2 \
+  --base-token <base_token> \
+  --table-id <商机管理_table_id> \
   --limit 50
 ```
 
-### 按阶段筛选
+### 按条件筛选
 
-```bash
-# 查看赢单商机
-lark-cli base +view-set-filter \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblMXhNvEvnEU3W2 \
-  --format json \
-  --json '{"field_name":"跟进阶段","operator":"is","value":["赢单"]}'
-```
+与客户查询相同，使用 `+record-list` 拉取后 AI 本地过滤。不要使用 `+view-set-filter`。
 
-**跟进阶段枚举**：待接触、初步提议、协商议价、丢失客户、赢单
-
-### 按销售人员筛选
-
-```bash
-lark-cli base +view-set-filter \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblMXhNvEvnEU3W2 \
-  --format json \
-  --json '{"field_name":"跟进销售人员","operator":"is","value":["ou_xxx"]}'
-```
+**跟进阶段枚举**：待接触、初步提议、方案报价、协商议价、丢失客户、赢单
 
 ### 输出字段
 
 1. 机会名称（formula 自动生成）
-2. 客户名称（关联显示）
+2. 客户名称（关联显示，需查客户管理表解析 record_id）
 3. 跟进阶段
 4. 业务价值
 5. 预计交易日期
@@ -211,15 +152,15 @@ lark-cli base +view-set-filter \
 
 ```bash
 lark-cli base +record-upsert \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblMXhNvEvnEU3W2 \
+  --base-token <base_token> \
+  --table-id <商机管理_table_id> \
   --json '{
-    "客户名称": [{"id": "recCDUyzLO"}],
+    "客户名称": [{"id": "recXXXXXX"}],
     "跟进阶段": "待接触",
     "业务价值": 150000,
     "商机描述": "客户对产品很感兴趣，初步沟通",
     "预计交易日期": "2026-06-30 00:00:00",
-    "跟进销售人员": [{"id": "ou_8e7564b2971c064ae9af2b5b2444fdc8"}]
+    "跟进销售人员": [{"id": "ou_xxx"}]
   }'
 ```
 
@@ -239,27 +180,25 @@ lark-cli base +record-upsert \
 ```bash
 # 推进到下一阶段
 lark-cli base +record-upsert \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblMXhNvEvnEU3W2 \
+  --base-token <base_token> \
+  --table-id <商机管理_table_id> \
   --record-id recXXXXXX \
   --json '{"跟进阶段": "协商议价"}'
 
 # 标记赢单
 lark-cli base +record-upsert \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblMXhNvEvnEU3W2 \
+  --base-token <base_token> \
+  --table-id <商机管理_table_id> \
   --record-id recXXXXXX \
   --json '{"跟进阶段": "赢单"}'
 
 # 标记丢单（需填写原因）
 lark-cli base +record-upsert \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblMXhNvEvnEU3W2 \
+  --base-token <base_token> \
+  --table-id <商机管理_table_id> \
   --record-id recXXXXXX \
   --json '{"跟进阶段": "丢失客户", "丢单原因": ["超客户预算"], "丢单原因备注": "客户预算上限50万"}'
 ```
-
-**丢单原因枚举**：超客户预算（可能还有其他选项，可通过 `+field-search-options` 查看）
 
 ---
 
@@ -274,10 +213,10 @@ lark-cli base +record-upsert \
 
 ```bash
 lark-cli base +record-upsert \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblKdCGHyWqK0JaR \
+  --base-token <base_token> \
+  --table-id <客户跟进记录_table_id> \
   --json '{
-    "客户名称": [{"id": "recCDUyzLO"}],
+    "客户名称": [{"id": "recXXXXXX"}],
     "跟进内容": "电话沟通客户需求，客户对方案很感兴趣",
     "跟进形式": "电话沟通",
     "跟进人员": [{"id": "ou_xxx"}],
@@ -289,9 +228,9 @@ lark-cli base +record-upsert \
 
 ```bash
 lark-cli base +record-upsert \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblKdCGHyWqK0JaR \
-  --json '{"客户名称": [{"id": "recCDUyzLO"}], "跟进内容": "拜访客户讨论方案"}'
+  --base-token <base_token> \
+  --table-id <客户跟进记录_table_id> \
+  --json '{"客户名称": [{"id": "recXXXXXX"}], "跟进内容": "拜访客户讨论方案"}'
 ```
 
 **跟进形式枚举**：现场拜访、电话沟通
@@ -309,16 +248,16 @@ lark-cli base +record-upsert \
 
 ```bash
 lark-cli base +record-list \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblziKesi4SJyUbO \
+  --base-token <base_token> \
+  --table-id <合同管理_table_id> \
   --limit 50
 ```
 
 ### 输出字段
 
 1. 合同编号
-2. 客户名称（关联显示）
-3. 商机名称（关联显示）
+2. 客户名称（关联显示，需查客户管理表解析 record_id）
+3. 商机名称（关联显示，需查商机管理表解析 record_id）
 4. 签约日期
 5. 合同金额
 6. 签约人员（lookup）
@@ -338,12 +277,12 @@ lark-cli base +record-list \
 
 ```bash
 lark-cli base +record-upsert \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblziKesi4SJyUbO \
+  --base-token <base_token> \
+  --table-id <合同管理_table_id> \
   --json '{
     "合同编号": "20260328-001",
-    "商机名称": [{"id": "rec7VApeAO"}],
-    "客户名称": [{"id": "recCDUyzLO"}],
+    "商机名称": [{"id": "recXXXXXX"}],
+    "客户名称": [{"id": "recXXXXXX"}],
     "签约日期": "2026-03-28 00:00:00",
     "合同金额": 500000,
     "合同录入": [{"id": "ou_xxx"}]
@@ -352,12 +291,30 @@ lark-cli base +record-upsert \
 
 ---
 
+## +记录删除
+
+删除记录需要 `--yes` 参数确认，否则会报 `unsafe_operation_blocked` 错误。
+
+```bash
+lark-cli base +record-delete \
+  --base-token <base_token> \
+  --table-id <table_id> \
+  --record-id recXXXXXX \
+  --yes
+```
+
+**注意**：
+- 删除是不可逆操作，执行前必须确认用户意图
+- 如果有关联记录（如客户关联了商机），可能需要先删除关联记录
+
+---
+
 ## +销售团队查询
 
 ```bash
 lark-cli base +record-list \
-  --base-token bascndXmwM3qJOVZjUR6LS4uSng \
-  --table-id tblCgqK5WIclezX9 \
+  --base-token <base_token> \
+  --table-id <销售人员管理_table_id> \
   --limit 50
 ```
 
@@ -367,24 +324,8 @@ lark-cli base +record-list \
 2. 销售区域
 3. 销售 Leader
 
-### 当前团队结构
+### 销售人员 ou_id 获取
 
-| Leader | 区域 | 下属 |
-|--------|------|------|
-| 于小宁 | 华北/华南/华中/华东 | 沈小茜、黄泡泡、王小铭、万小奇、陈小葵、周北北 |
-| 蔡佑程 | 华北/华中 | 董小飞、林小智 |
+用于写入 user 字段时的 `ou_id`。从查询结果的「销售」字段（人员类型）中提取 `id` 值。
 
-### 销售人员 ID 映射
-
-用于写入 user 字段时的 `ou_id`：
-
-| 姓名 | ou_id | 区域 | Leader |
-|------|-------|------|--------|
-| 沈小茜 | ou_b78fd580a0695b6bbfd30abb00175c7b | 华北 | 于小宁 |
-| 黄泡泡 | ou_7d7ce9bbc232b53c71d8e184cb1d21e3 | 华南 | 于小宁 |
-| 王小铭 | ou_8e7564b2971c064ae9af2b5b2444fdc8 | 华南 | 于小宁 |
-| 万小奇 | ou_921de94cd11471ce6352b8ba638bbd0e | 华中 | 于小宁 |
-| 董小飞 | ou_367ead136946e1c4ef1d378fc9a00dca | 华北 | 蔡佑程 |
-| 林小智 | ou_5c04ada6ede37e5ce68ec53a05047140 | 华中 | 蔡佑程 |
-| 陈小葵 | ou_584b7ff89e549184ca7c831846639853 | 华南 | 于小宁 |
-| 周北北 | ou_911f79b574bbf7f1164370e9ac940545 | 华东 | 于小宁 |
+> **注意**：不要硬编码 ou_id，人员变动后 ID 可能失效。每次需要时从查询结果中实时获取。

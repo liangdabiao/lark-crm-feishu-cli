@@ -1,6 +1,6 @@
 ---
 name: lark-crm
-version: 2.0.0
+version: 2.1.0
 description: "飞书轻型 CRM 系统管理：客户管理、商机管理、跟进记录、合同管理、销售报表分析。当用户提到 CRM、客户、商机、合同、跟进记录、销售漏斗、赢单、丢单、销售报表、销售统计、客户查询、客户管理时使用。"
 metadata:
   requires:
@@ -59,6 +59,8 @@ metadata:
 ├─ 合同相关（合同/签约/协议）
 │   ├─ 查询/查看 → +合同查询
 │   └─ 新增/录入 → +合同新增
+├─ 删除相关（删除/移除/不要了）
+│   └─ +记录删除（需 --yes 确认）
 ├─ 报表分析（报表/统计/分析/排名/总计/汇总/业绩/漏斗）
 │   └─ +销售报表（读取 crm-analytics.md，使用 +data-query）
 └─ 销售团队（销售团队/销售人员/销售区域）
@@ -149,7 +151,9 @@ lark-cli base +data-query \
   --json '<参见 crm-analytics.md 销售漏斗模板>'
 ```
 
-**输出格式**：展示商机名称、客户名称、跟进阶段、业务价值、预计交易日期、跟进销售人员。
+**输出格式**：展示机会名称（formula 字段，如"国信易有限公司-协商议价-..."）、客户名称（link 字段，需查客户管理表解析）、跟进阶段、业务价值、预计交易日期、跟进销售人员。
+
+> **注意**：客户名称是 link 字段，返回 record_id。若需展示可读名称，先查客户管理表建立 ID→名称映射。
 
 ### +商机新增
 
@@ -160,7 +164,7 @@ lark-cli base +data-query \
 | 字段名 | 类型 | 必填 | 格式 |
 |--------|------|------|------|
 | 客户名称 | link | 是 | `[{"id":"recXXXXXX"}]`（客户管理表的 record_id） |
-| 跟进阶段 | select | 否 | 单选：待接触/初步提议/协商议价/丢失客户/赢单 |
+| 跟进阶段 | select | 否 | 单选：待接触/初步提议/方案报价/协商议价/丢失客户/赢单 |
 | 业务价值 | number | 否 | 数字 |
 | 商机描述 | text | 否 | 字符串 |
 | 预计交易日期 | datetime | 否 | "YYYY-MM-DD HH:mm:ss" |
@@ -228,6 +232,8 @@ lark-cli base +record-list \
 
 **输出格式**：展示合同编号、客户名称、签约日期、合同金额、签约人员。
 
+> **注意**：客户名称和商机名称是 link 字段，返回 record_id。需先查客户管理表和商机管理表建立 ID→名称映射后再展示。
+
 ### +合同新增
 
 新增合同记录。
@@ -246,6 +252,14 @@ lark-cli base +record-list \
 
 **只读字段**：签约人员（lookup）。
 
+```bash
+# 需先通过 +客户查询 和 +商机查询 获取 record_id
+lark-cli base +record-upsert \
+  --base-token <base_token> \
+  --table-id <合同管理_table_id> \
+  --json '{"合同编号":"20260329-001","客户名称":[{"id":"recXXXXXX"}],"商机名称":[{"id":"recXXXXXX"}],"签约日期":"2026-03-29 00:00:00","合同金额":500000}'
+```
+
 ### +销售报表
 
 销售数据分析和报表。**必须先读取 [`references/crm-analytics.md`](references/crm-analytics.md)** 获取 data-query DSL 模板。
@@ -257,6 +271,23 @@ lark-cli base +record-list \
 - 按区域统计
 - 合同金额汇总
 - 按行业/客户规模分布
+
+### +记录删除
+
+删除记录（客户、商机、跟进、合同等）。
+
+```bash
+lark-cli base +record-delete \
+  --base-token <base_token> \
+  --table-id <table_id> \
+  --record-id recXXXXXX \
+  --yes
+```
+
+**注意**：
+- **必须加 `--yes`**，否则报 `unsafe_operation_blocked` 错误
+- 删除不可逆，执行前必须确认用户意图
+- 如果有关联记录（如客户关联了商机/合同），需先删除子记录再删父记录
 
 ### +销售团队查询
 
@@ -296,6 +327,8 @@ lark-cli base +record-list \
 9. **user 字段需要 open_id** — 用户给姓名时,先从已有记录匹配或通过 `lark-cli contact +search` 查找 open_id。
 10. **403 权限错误处理** — 遇到 HTTP 403 时，告知用户需要让 base 管理员授予编辑权限，或通过飞书界面分享表格并设置「可编辑」。
 11. **link 字段解析** — 查询结果中的 link 类型字段（如客户名称、商机名称）返回的是 record_id（`[{"id":"recXXXXXX"}]`），不是可读名称。若需展示名称，必须先查对应表建立 ID→名称映射后再输出。
+12. **删除必须加 --yes** — `+record-delete` 必须带 `--yes` 参数，否则会报 `unsafe_operation_blocked`。删除前确认用户意图。
+13. **data-query 返回格式** — `+data-query` 的 `main_data` 中每个值是 `{"value": xxx}` 格式。金额字段（如 sum 聚合）返回带 ¥ 符号的字符串（如 `"¥9,215,261.00"`），展示时直接使用或解析数字部分做进一步计算。
 
 ## 权限
 
